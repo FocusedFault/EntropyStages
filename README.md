@@ -2,9 +2,9 @@
 
 ### REPORT ANY ISSUES USING THE LINK ABOVE
 
-#### What is Entropy?
+### What is Entropy?
 
-Entropy is a larger mod I'm planning that'll be divided into modules instead of having everything packed together so people can download the parts they want.
+Entropy is a larger mod I'm planning that'll be divided into modules instead of having everything packed together so people can download the parts they want and I can release parts early.
 
 ### Stage Changes
 
