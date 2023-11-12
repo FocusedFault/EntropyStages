@@ -1,0 +1,9 @@
+﻿{
+	"name": "EntropyStages",
+	"version_number": "0.9.0",
+	"website_url": "",
+	"description": "Stages module for Entropy. Adds simulacrum stages to normal stage pool.",
+	"dependencies": [
+		"RiskofThunder-R2API_Elites-1.0.3"
+	]
+}
