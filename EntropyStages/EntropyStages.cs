@@ -1,18 +1,18 @@
 using BepInEx;
 using R2API;
 using RoR2;
+using RoR2.Navigation;
 using RoR2.UI;
 using System.Collections.Generic;
 using System;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.AddressableAssets;
 using UnityEngine.SceneManagement;
 
 namespace EntropyStages
 {
-  [BepInPlugin("com.Nuxlar.EntropyStages", "EntropyStages", "0.9.0")]
+  [BepInPlugin("com.Nuxlar.EntropyStages", "EntropyStages", "0.9.2")]
   [BepInDependency(EliteAPI.PluginGUID)]
 
   public class EntropyStages : BaseUnityPlugin
@@ -51,38 +51,26 @@ namespace EntropyStages
         };
     */
     private static DirectorCardCategorySelection[] dccsInteractables = new DirectorCardCategorySelection[] {
-      Addressables.LoadAssetAsync<DirectorCardCategorySelection>("RoR2/DLC1/itgolemplains/itgolemplains.asset").WaitForCompletion(),
-      Addressables.LoadAssetAsync<DirectorCardCategorySelection>("RoR2/DLC1/itancientloft/itancientloft.asset").WaitForCompletion(),
-      Addressables.LoadAssetAsync<DirectorCardCategorySelection>("RoR2/DLC1/itgoolake/itgoolake.asset").WaitForCompletion(),
-      Addressables.LoadAssetAsync<DirectorCardCategorySelection>("RoR2/DLC1/itfrozenwall/itfrozenwall.asset").WaitForCompletion(),
-      Addressables.LoadAssetAsync<DirectorCardCategorySelection>("RoR2/DLC1/itdampcave/itdampcave.asset").WaitForCompletion(),
-      Addressables.LoadAssetAsync<DirectorCardCategorySelection>("RoR2/DLC1/itskymeadow/itskymeadow.asset").WaitForCompletion()
+      Addressables.LoadAssetAsync<DirectorCardCategorySelection>("RoR2/DLC1/GameModes/InfiniteTowerRun/InfiniteTowerAssets/dccsInfiniteTowerInteractables.asset").WaitForCompletion()
     };
     private static String[] voidStageNames = new String[] { "itgolemplains", "itgoolake", "itancientloft", "itfrozenwall", "itdampcave", "itskymeadow" };
 
     public void Awake()
     {
       AddVoidStagesToPool();
-      TweakInteractables();
       On.RoR2.Stage.Start += Stage_Start;
       On.RoR2.CombatDirector.Init += CombatDirector_Init;
       On.RoR2.ClassicStageInfo.Start += ClassicStageInfo_Start;
-      On.RoR2.BazaarController.Start += BazaarController_Start;
+      On.RoR2.VoidSuppressorBehavior.Start += VoidSuppressorBehavior_Start;
       On.RoR2.CombatDirector.EliteTierDef.GetRandomAvailableEliteDef += EliteTierDef_GetRandomAvailableEliteDef;
       On.RoR2.UI.ObjectivePanelController.DestroyTimeCrystals.GenerateString += DestroyTimeCrystals_GenerateString;
     }
 
-    private void BazaarController_Start(On.RoR2.BazaarController.orig_Start orig, BazaarController self)
+    private void VoidSuppressorBehavior_Start(On.RoR2.VoidSuppressorBehavior.orig_Start orig, VoidSuppressorBehavior self)
     {
-      GameObject seerShop = GameObject.Find("SeerShop");
-      if ((bool)seerShop)
-      {
-        GameObject newStation = UnityEngine.Object.Instantiate<GameObject>(this.seerStation, seerShop.transform);
-        NetworkServer.Spawn(newStation);
-        newStation.transform.localPosition = new Vector3(0.2f, -0.81f, 0f);
-        newStation.transform.localRotation = Quaternion.identity;
-      }
       orig(self);
+      self.numItemsToReveal = 3;
+      self.itemsSuppressedPerPurchase = 3;
     }
 
     private void AddToSceneCollection(SceneCollection sc, List<SceneDef> scenesToAdd)
@@ -92,23 +80,6 @@ namespace EntropyStages
         sceneList.Add(new SceneCollection.SceneEntry { sceneDef = sd, weightMinusOne = 0 });
 
       sc._sceneEntries = sceneList.ToArray();
-    }
-
-    private void RemoveInteractables(DirectorCardCategorySelection dccs)
-    {
-      for (int i = 0; i < dccs.categories.Length; i++)
-      {
-        DirectorCardCategorySelection.Category category = dccs.categories[i];
-        Debug.LogWarning(category.name);
-        if (category.name == "Duplicator")
-          dccs.categories[i].cards = new DirectorCard[] { };
-      }
-    }
-
-    private void TweakInteractables()
-    {
-      foreach (DirectorCardCategorySelection dccs in dccsInteractables)
-        RemoveInteractables(dccs);
     }
 
     private void AddVoidStagesToPool()
@@ -199,22 +170,22 @@ namespace EntropyStages
       switch (name)
       {
         case "itgolemplains":
-          self.sceneDirectorMonsterCredits = 150;
+          self.sceneDirectorMonsterCredits = 100;
           break;
         case "itgoolake":
-          self.sceneDirectorMonsterCredits = 200;
+          self.sceneDirectorMonsterCredits = 150;
           break;
         case "itancientloft":
-          self.sceneDirectorMonsterCredits = 200;
+          self.sceneDirectorMonsterCredits = 150;
           break;
         case "itfrozenwall":
-          self.sceneDirectorMonsterCredits = 250;
+          self.sceneDirectorMonsterCredits = 200;
           break;
         case "itskymeadow":
-          self.sceneDirectorMonsterCredits = 250;
+          self.sceneDirectorMonsterCredits = 200;
           break;
         case "itdampcave":
-          self.sceneDirectorMonsterCredits = 300;
+          self.sceneDirectorMonsterCredits = 250;
           break;
       }
       orig(self);
@@ -234,11 +205,11 @@ namespace EntropyStages
           {
             CombatDirector combatDirector = gameObject.AddComponent<CombatDirector>();
             CombatDirector combatDirector2 = gameObject.AddComponent<CombatDirector>();
-            combatDirector.customName = "Monsters";
+            combatDirector.customName = "Director";
             combatDirector.creditMultiplier = 0.75f;
             combatDirector.minRerollSpawnInterval = 4.5f;
             combatDirector.maxRerollSpawnInterval = 9f;
-            combatDirector.creditMultiplier = 1.1f;
+            combatDirector.creditMultiplier = 1.2f;
             combatDirector.onSpawnedServer = new();
             combatDirector.moneyWaveIntervals = new RangeFloat[1]
             {
@@ -248,7 +219,7 @@ namespace EntropyStages
             combatDirector2.creditMultiplier = 0.75f;
             combatDirector2.minRerollSpawnInterval = 22.5f;
             combatDirector2.maxRerollSpawnInterval = 30f;
-            combatDirector2.creditMultiplier = 1.1f;
+            combatDirector2.creditMultiplier = 1.2f;
             combatDirector2.onSpawnedServer = new();
             combatDirector2.moneyWaveIntervals = new RangeFloat[1]
             {
@@ -273,12 +244,30 @@ namespace EntropyStages
             component2.FindChild("TimeCrystalProps").gameObject.SetActive(true);
             component2.FindChild("TimeCrystalBeaconBlocker").gameObject.SetActive(true);
             gameObject.AddComponent<CrystalController>();
+
+            // Spawn Void Suppressors
+            DirectorPlacementRule placementRule = new DirectorPlacementRule();
+            placementRule.placementMode = DirectorPlacementRule.PlacementMode.Random;
+            DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC1/VoidSuppressor/iscVoidSuppressor.asset").WaitForCompletion(), placementRule, Run.instance.stageRng));
+            for (int i = 0; i < 2; i++)
+            {
+              if (UnityEngine.Random.value < 0.5f)
+                DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC1/VoidSuppressor/iscVoidSuppressor.asset").WaitForCompletion(), placementRule, Run.instance.stageRng));
+            }
+
+            // Create spawn points
+            Vector3 position1 = TeleporterInteraction.instance.transform.position;
+            NodeGraph nodeGraph = SceneInfo.instance.GetNodeGraph(MapNodeGroup.GraphType.Ground);
+            foreach (NodeGraph.NodeIndex withFlagCondition in nodeGraph.FindNodesInRangeWithFlagConditions(position1, 0.0f, 50, HullMask.Human, NodeFlags.None, NodeFlags.NoCharacterSpawn, false))
+            {
+              Vector3 position2;
+              if (nodeGraph.GetNodePosition(withFlagCondition, out position2))
+                SpawnPoint.AddSpawnPoint(position2, Quaternion.LookRotation(position1, Vector3.up));
+            }
           }
         }
       }
       orig(self);
-      if ((bool)TeleporterInteraction.instance)
-        TeleporterInteraction.instance.shouldAttemptToSpawnShopPortal = true;
     }
   }
 }
