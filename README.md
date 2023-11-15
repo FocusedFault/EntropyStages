@@ -2,21 +2,34 @@
 
 ### REPORT ANY ISSUES USING THE LINK ABOVE
 
+### THIS MOD WILL CAUSE ISSUES WITH SIMULACRUM
+
 ### What is Entropy?
 
 Entropy is a larger mod I'm planning that'll be divided into modules instead of having everything packed together so people can download the parts they want and I can release parts early.
 
 ### Stage Changes
 
-- Simulacrum stages have been added to the regular run pool as "Corrupted" Stages
-- You can dream for corrupted stages at newt (they'll appear as an empty dream)
-- Corrupted stages have been added to stage 1-4 pools. S1 +Void Plains, S2 +Void Aphelian/Aqueduct, S3 +Void RPD/Meadow, S4 +Void Abyssal
-- Corrupted stages have voidtouched elites in the elite pool
-- Corrupted stages have +20% enemy credits
-- Corrupted stages have their teleporter locked with 3 time crystals (like prismatic)
-- Corrupted stages have a guaranteed void suppressor with a chance for 3 total
+- Simulacrum stages have been reworked and added as side stages like void fields
+- There's a 25% chance for a void tear to appear on stages with a simulacrum variant
+- The stage will have one-fourth of the interactable credits
+- The stage's teleporter will be locked behind crystals
+- The stage has extra enemy credits (10%) (increased/stronger enemies)
+- The stage will have voidtouched elites added to the pool
+- Time is NOT stopped on the void stages
+- Stage number IS progressed
+- 1 void suppressor is guaranteed to spawn in these stages
 
 ## Changelog
+
+**0.9.5**
+
+- Rework
+- Void stages are similar to void fields, advances stage and time progresses
+- Adds 25% chance for a "tear" to appear after TP on vanilla versions of the void stages
+- Reduced interactables significantly (1/4)
+- Reduces extra enemy credits to 10%
+- Removes extra suppressors (only 1 guaranteed)
 
 **0.9.2**
 

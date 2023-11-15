@@ -7,18 +7,22 @@ using System.Collections.Generic;
 using System;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.AddressableAssets;
 using UnityEngine.SceneManagement;
 
 namespace EntropyStages
 {
-  [BepInPlugin("com.Nuxlar.EntropyStages", "EntropyStages", "0.9.2")]
+  [BepInPlugin("com.Nuxlar.EntropyStages", "EntropyStages", "0.9.5")]
   [BepInDependency(EliteAPI.PluginGUID)]
+  [BepInDependency(PrefabAPI.PluginGUID)]
 
   public class EntropyStages : BaseUnityPlugin
   {
     private SpawnCard teleporterSpawnCard = Addressables.LoadAssetAsync<SpawnCard>("RoR2/Base/Teleporters/iscTeleporter.asset").WaitForCompletion();
-    private GameObject seerStation = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/bazaar/SeerStation.prefab").WaitForCompletion();
+    private GameObject tearPortal = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/PortalArena/PortalArena.prefab").WaitForCompletion(), "NuxVoidTear");
+    private InteractableSpawnCard deepVoidSpawnCard = Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/DLC1/DeepVoidPortal/iscDeepVoidPortal.asset").WaitForCompletion();
+    private GameObject tear = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/DLC1/gauntlets/GauntletEntranceOrb.prefab").WaitForCompletion().transform.GetChild(0).gameObject, "NuxTearVFX");
     private EliteDef voidElite = Addressables.LoadAssetAsync<EliteDef>("RoR2/DLC1/EliteVoid/edVoid.asset").WaitForCompletion();
     private SceneDef voidPlains = Addressables.LoadAssetAsync<SceneDef>("RoR2/DLC1/itgolemplains/itgolemplains.asset").WaitForCompletion();
     private SceneDef voidAphelian = Addressables.LoadAssetAsync<SceneDef>("RoR2/DLC1/itancientloft/itancientloft.asset").WaitForCompletion();
@@ -33,6 +37,7 @@ namespace EntropyStages
     private SceneCollection sc3 = Addressables.LoadAssetAsync<SceneCollection>("RoR2/Base/SceneGroups/sgStage3.asset").WaitForCompletion();
     private SceneCollection sc4 = Addressables.LoadAssetAsync<SceneCollection>("RoR2/Base/SceneGroups/sgStage4.asset").WaitForCompletion();
     private SceneCollection sc5 = Addressables.LoadAssetAsync<SceneCollection>("RoR2/Base/SceneGroups/sgStage5.asset").WaitForCompletion();
+    private InteractableSpawnCard iscVoidTear = ScriptableObject.CreateInstance<InteractableSpawnCard>();
 
     /*
         private static DirectorCardCategorySelection[] dccsInteractables = new DirectorCardCategorySelection[] {
@@ -57,6 +62,7 @@ namespace EntropyStages
 
     public void Awake()
     {
+      SetupVoidTear();
       AddVoidStagesToPool();
       On.RoR2.Stage.Start += Stage_Start;
       On.RoR2.CombatDirector.Init += CombatDirector_Init;
@@ -64,6 +70,35 @@ namespace EntropyStages
       On.RoR2.VoidSuppressorBehavior.Start += VoidSuppressorBehavior_Start;
       On.RoR2.CombatDirector.EliteTierDef.GetRandomAvailableEliteDef += EliteTierDef_GetRandomAvailableEliteDef;
       On.RoR2.UI.ObjectivePanelController.DestroyTimeCrystals.GenerateString += DestroyTimeCrystals_GenerateString;
+      On.RoR2.TeleporterInteraction.AttemptToSpawnAllEligiblePortals += TeleporterInteraction_AttemptToSpawnAllEligiblePortals;
+    }
+
+    private void SetupVoidTear()
+    {
+      tearPortal.GetComponent<GenericInteraction>().contextToken = "Enter ???";
+      tearPortal.GetComponent<SceneExitController>().destinationScene = voidPlains;
+      tearPortal.GetComponent<SceneExitController>().useRunNextStageScene = false;
+      // Destroy(tearPortal.transform.GetChild(0).gameObject);
+      foreach (Transform child in tearPortal.transform.GetChild(0))
+      {
+        if (child.name != "Collider")
+          Destroy(child.gameObject);
+      }
+
+      Transform tearVFX = Instantiate(tear, tearPortal.transform).transform;
+      Destroy(tearVFX.GetComponent<ObjectScaleCurve>());
+      tearVFX.localScale = new Vector3(0.75f, 0.75f, 0.75f);
+      tearVFX.localPosition = new Vector3(0f, 5f, 0f);
+      tearVFX.localRotation = Quaternion.identity;
+      tearVFX.Rotate(new Vector3(0, 0, 45));
+
+      iscVoidTear.name = "iscVoidTearNux";
+      iscVoidTear.prefab = tearPortal;
+      iscVoidTear.sendOverNetwork = deepVoidSpawnCard.sendOverNetwork;
+      iscVoidTear.hullSize = deepVoidSpawnCard.hullSize;
+      iscVoidTear.nodeGraphType = deepVoidSpawnCard.nodeGraphType;
+      iscVoidTear.requiredFlags = deepVoidSpawnCard.requiredFlags;
+      iscVoidTear.forbiddenFlags = deepVoidSpawnCard.forbiddenFlags;
     }
 
     private void VoidSuppressorBehavior_Start(On.RoR2.VoidSuppressorBehavior.orig_Start orig, VoidSuppressorBehavior self)
@@ -71,15 +106,6 @@ namespace EntropyStages
       orig(self);
       self.numItemsToReveal = 3;
       self.itemsSuppressedPerPurchase = 3;
-    }
-
-    private void AddToSceneCollection(SceneCollection sc, List<SceneDef> scenesToAdd)
-    {
-      List<SceneCollection.SceneEntry> sceneList = sc._sceneEntries.ToList();
-      foreach (SceneDef sd in scenesToAdd)
-        sceneList.Add(new SceneCollection.SceneEntry { sceneDef = sd, weightMinusOne = 0 });
-
-      sc._sceneEntries = sceneList.ToArray();
     }
 
     private void AddVoidStagesToPool()
@@ -90,31 +116,14 @@ namespace EntropyStages
       List<SceneDef> s3Corrupted = new() { this.voidRallypoint, this.voidMeadow };
       List<SceneDef> s4Corrupted = new() { this.voidAbyssal };
 
-      AddToSceneCollection(sc1, s1Corrupted);
-      AddToSceneCollection(sc2, s2Corrupted);
-      AddToSceneCollection(sc3, s3Corrupted);
-      AddToSceneCollection(sc4, s4Corrupted);
-
       foreach (SceneDef sd in s1Corrupted)
-      {
-        sd.stageOrder = 1;
         sd.destinationsGroup = sc2;
-      }
       foreach (SceneDef sd in s2Corrupted)
-      {
-        sd.stageOrder = 2;
         sd.destinationsGroup = sc3;
-      }
       foreach (SceneDef sd in s3Corrupted)
-      {
-        sd.stageOrder = 3;
         sd.destinationsGroup = sc4;
-      }
       foreach (SceneDef sd in s4Corrupted)
-      {
-        sd.stageOrder = 4;
         sd.destinationsGroup = sc5;
-      }
     }
 
     private string DestroyTimeCrystals_GenerateString(On.RoR2.UI.ObjectivePanelController.DestroyTimeCrystals.orig_GenerateString orig, ObjectivePanelController.ObjectiveTracker self)
@@ -163,28 +172,90 @@ namespace EntropyStages
         return result;
     }
 
+    private GameObject SpawnTear(TeleporterInteraction tpInteraction)
+    {
+      GameObject voidTearInstance = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(iscVoidTear, new DirectorPlacementRule()
+      {
+        minDistance = 10f,
+        maxDistance = 40f,
+        placementMode = DirectorPlacementRule.PlacementMode.Approximate,
+        position = tpInteraction.transform.position,
+        spawnOnTarget = tpInteraction.transform
+      }, tpInteraction.rng));
+      return voidTearInstance;
+    }
+
+    private void TeleporterInteraction_AttemptToSpawnAllEligiblePortals(On.RoR2.TeleporterInteraction.orig_AttemptToSpawnAllEligiblePortals orig, TeleporterInteraction self)
+    {
+      string name = SceneManager.GetActiveScene().name;
+      if (UnityEngine.Random.value < 0.25f)
+      {
+        GameObject voidTearInstance;
+        switch (name)
+        {
+          case "golemplains":
+            voidTearInstance = SpawnTear(self);
+            if ((bool)voidTearInstance)
+              voidTearInstance.GetComponent<SceneExitController>().destinationScene = voidPlains;
+            break;
+          case "goolake":
+            voidTearInstance = SpawnTear(self);
+            if ((bool)voidTearInstance)
+              voidTearInstance.GetComponent<SceneExitController>().destinationScene = voidAqueduct;
+            break;
+          case "ancientloft":
+            voidTearInstance = SpawnTear(self);
+            if ((bool)voidTearInstance)
+              voidTearInstance.GetComponent<SceneExitController>().destinationScene = voidAphelian;
+            break;
+          case "frozenwall":
+            voidTearInstance = SpawnTear(self);
+            if ((bool)voidTearInstance)
+              voidTearInstance.GetComponent<SceneExitController>().destinationScene = voidRallypoint;
+            break;
+          case "dampcave":
+            voidTearInstance = SpawnTear(self);
+            if ((bool)voidTearInstance)
+              voidTearInstance.GetComponent<SceneExitController>().destinationScene = voidAbyssal;
+            break;
+          case "skymeadow":
+            voidTearInstance = SpawnTear(self);
+            if ((bool)voidTearInstance)
+              voidTearInstance.GetComponent<SceneExitController>().destinationScene = voidMeadow;
+            break;
+        }
+      }
+      // NetworkServer.Spawn(voidTearInstance);
+      orig(self);
+    }
+
     private void ClassicStageInfo_Start(On.RoR2.ClassicStageInfo.orig_Start orig, ClassicStageInfo self)
     {
       string name = SceneManager.GetActiveScene().name;
-
       switch (name)
       {
         case "itgolemplains":
+          self.sceneDirectorInteractibleCredits /= 4;
           self.sceneDirectorMonsterCredits = 100;
           break;
         case "itgoolake":
+          self.sceneDirectorInteractibleCredits /= 4;
           self.sceneDirectorMonsterCredits = 150;
           break;
         case "itancientloft":
+          self.sceneDirectorInteractibleCredits /= 4;
           self.sceneDirectorMonsterCredits = 150;
           break;
         case "itfrozenwall":
+          self.sceneDirectorInteractibleCredits /= 4;
+          self.sceneDirectorMonsterCredits = 175;
+          break;
+        case "itdampcave":
+          self.sceneDirectorInteractibleCredits /= 4;
           self.sceneDirectorMonsterCredits = 200;
           break;
         case "itskymeadow":
-          self.sceneDirectorMonsterCredits = 200;
-          break;
-        case "itdampcave":
+          self.sceneDirectorInteractibleCredits /= 4;
           self.sceneDirectorMonsterCredits = 250;
           break;
       }
@@ -209,7 +280,7 @@ namespace EntropyStages
             combatDirector.creditMultiplier = 0.75f;
             combatDirector.minRerollSpawnInterval = 4.5f;
             combatDirector.maxRerollSpawnInterval = 9f;
-            combatDirector.creditMultiplier = 1.2f;
+            combatDirector.creditMultiplier = 1.1f;
             combatDirector.onSpawnedServer = new();
             combatDirector.moneyWaveIntervals = new RangeFloat[1]
             {
@@ -219,7 +290,7 @@ namespace EntropyStages
             combatDirector2.creditMultiplier = 0.75f;
             combatDirector2.minRerollSpawnInterval = 22.5f;
             combatDirector2.maxRerollSpawnInterval = 30f;
-            combatDirector2.creditMultiplier = 1.2f;
+            combatDirector2.creditMultiplier = 1.1f;
             combatDirector2.onSpawnedServer = new();
             combatDirector2.moneyWaveIntervals = new RangeFloat[1]
             {
@@ -249,11 +320,6 @@ namespace EntropyStages
             DirectorPlacementRule placementRule = new DirectorPlacementRule();
             placementRule.placementMode = DirectorPlacementRule.PlacementMode.Random;
             DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC1/VoidSuppressor/iscVoidSuppressor.asset").WaitForCompletion(), placementRule, Run.instance.stageRng));
-            for (int i = 0; i < 2; i++)
-            {
-              if (UnityEngine.Random.value < 0.5f)
-                DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC1/VoidSuppressor/iscVoidSuppressor.asset").WaitForCompletion(), placementRule, Run.instance.stageRng));
-            }
 
             // Create spawn points
             Vector3 position1 = TeleporterInteraction.instance.transform.position;

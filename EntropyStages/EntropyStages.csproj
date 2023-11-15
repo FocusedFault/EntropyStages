@@ -25,6 +25,7 @@
     </PackageReference>
     <PackageReference Include="R2API.Core" Version="5.0.11" />
     <PackageReference Include="R2API.Elites" Version="1.0.3" />
+    <PackageReference Include="R2API.Prefab" Version="1.0.3" />
   </ItemGroup>
 
 </Project>
