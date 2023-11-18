@@ -10,10 +10,11 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.AddressableAssets;
 using UnityEngine.SceneManagement;
+using Rewired.Utils;
 
 namespace EntropyStages
 {
-  [BepInPlugin("com.Nuxlar.EntropyStages", "EntropyStages", "0.9.5")]
+  [BepInPlugin("com.Nuxlar.EntropyStages", "EntropyStages", "0.9.6")]
   [BepInDependency(EliteAPI.PluginGUID)]
   [BepInDependency(PrefabAPI.PluginGUID)]
 
@@ -75,6 +76,7 @@ namespace EntropyStages
 
     private void SetupVoidTear()
     {
+      tear.AddComponent<NetworkIdentity>();
       tearPortal.GetComponent<GenericInteraction>().contextToken = "Enter ???";
       tearPortal.GetComponent<SceneExitController>().destinationScene = voidPlains;
       tearPortal.GetComponent<SceneExitController>().useRunNextStageScene = false;
@@ -188,7 +190,7 @@ namespace EntropyStages
     private void TeleporterInteraction_AttemptToSpawnAllEligiblePortals(On.RoR2.TeleporterInteraction.orig_AttemptToSpawnAllEligiblePortals orig, TeleporterInteraction self)
     {
       string name = SceneManager.GetActiveScene().name;
-      if (UnityEngine.Random.value < 0.25f)
+      if (UnityEngine.Random.value < 1f)
       {
         GameObject voidTearInstance;
         switch (name)
@@ -270,67 +272,71 @@ namespace EntropyStages
         GameObject gameObject = GameObject.Find("InfiniteTowerSceneDirector");
         if ((bool)gameObject)
         {
-          gameObject.AddComponent<DirectorCore>();
-          SceneDirector component1 = gameObject.GetComponent<SceneDirector>();
-          if ((bool)component1)
+          DirectorCore dc = gameObject.GetComponent<DirectorCore>();
+          if (!(bool)dc)
+            gameObject.AddComponent<DirectorCore>();
+          if (self.isServer)
           {
-            CombatDirector combatDirector = gameObject.AddComponent<CombatDirector>();
-            CombatDirector combatDirector2 = gameObject.AddComponent<CombatDirector>();
-            combatDirector.customName = "Director";
-            combatDirector.creditMultiplier = 0.75f;
-            combatDirector.minRerollSpawnInterval = 4.5f;
-            combatDirector.maxRerollSpawnInterval = 9f;
-            combatDirector.creditMultiplier = 1.1f;
-            combatDirector.onSpawnedServer = new();
-            combatDirector.moneyWaveIntervals = new RangeFloat[1]
-            {
-              new RangeFloat() { min = 1f, max = 1f }
-            };
-            combatDirector2.customName = "Monsters";
-            combatDirector2.creditMultiplier = 0.75f;
-            combatDirector2.minRerollSpawnInterval = 22.5f;
-            combatDirector2.maxRerollSpawnInterval = 30f;
-            combatDirector2.creditMultiplier = 1.1f;
-            combatDirector2.onSpawnedServer = new();
-            combatDirector2.moneyWaveIntervals = new RangeFloat[1]
-            {
-              new RangeFloat() { min = 1f, max = 1f }
-            };
-
-            combatDirector.Awake();
-            combatDirector2.Awake();
-
-            combatDirector.enabled = true;
-            combatDirector2.enabled = true;
-
-            component1.PopulateScene();
-            component1.teleporterSpawnCard = this.teleporterSpawnCard;
-            component1.PlaceTeleporter();
-
-            if (!(bool)TeleporterInteraction.instance)
-              return;
-            ChildLocator component2 = TeleporterInteraction.instance.GetComponent<ModelLocator>().modelTransform.GetComponent<ChildLocator>();
-            if (!(bool)component2)
-              return;
-            component2.FindChild("TimeCrystalProps").gameObject.SetActive(true);
-            component2.FindChild("TimeCrystalBeaconBlocker").gameObject.SetActive(true);
             gameObject.AddComponent<CrystalController>();
-
-            // Spawn Void Suppressors
-            DirectorPlacementRule placementRule = new DirectorPlacementRule();
-            placementRule.placementMode = DirectorPlacementRule.PlacementMode.Random;
-            DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC1/VoidSuppressor/iscVoidSuppressor.asset").WaitForCompletion(), placementRule, Run.instance.stageRng));
-
-            // Create spawn points
-            Vector3 position1 = TeleporterInteraction.instance.transform.position;
-            NodeGraph nodeGraph = SceneInfo.instance.GetNodeGraph(MapNodeGroup.GraphType.Ground);
-            foreach (NodeGraph.NodeIndex withFlagCondition in nodeGraph.FindNodesInRangeWithFlagConditions(position1, 0.0f, 50, HullMask.Human, NodeFlags.None, NodeFlags.NoCharacterSpawn, false))
+            SceneDirector component1 = gameObject.GetComponent<SceneDirector>();
+            if ((bool)component1)
             {
-              Vector3 position2;
-              if (nodeGraph.GetNodePosition(withFlagCondition, out position2))
-                SpawnPoint.AddSpawnPoint(position2, Quaternion.LookRotation(position1, Vector3.up));
+              CombatDirector[] cd = gameObject.GetComponents<CombatDirector>();
+              if (cd.Length == 0)
+              {
+                CombatDirector combatDirector = gameObject.AddComponent<CombatDirector>();
+                CombatDirector combatDirector2 = gameObject.AddComponent<CombatDirector>();
+                combatDirector.customName = "Director";
+                combatDirector.minRerollSpawnInterval = 4.5f;
+                combatDirector.maxRerollSpawnInterval = 9f;
+                combatDirector.creditMultiplier = 1.075f;
+                combatDirector.onSpawnedServer = new();
+                combatDirector.moneyWaveIntervals = new RangeFloat[1]
+                {
+              new RangeFloat() { min = 1f, max = 1f }
+                };
+                combatDirector2.customName = "Director";
+                combatDirector2.minRerollSpawnInterval = 22.5f;
+                combatDirector2.maxRerollSpawnInterval = 30f;
+                combatDirector2.creditMultiplier = 1.075f;
+                combatDirector2.onSpawnedServer = new();
+                combatDirector2.moneyWaveIntervals = new RangeFloat[1]
+                {
+              new RangeFloat() { min = 1f, max = 1f }
+                };
+                combatDirector.Awake();
+                combatDirector2.Awake();
+
+                combatDirector.enabled = true;
+                combatDirector2.enabled = true;
+
+                component1.PopulateScene();
+                component1.teleporterSpawnCard = this.teleporterSpawnCard;
+                component1.PlaceTeleporter();
+              }
+              if (!(bool)TeleporterInteraction.instance)
+                return;
+              Vector3 position1 = TeleporterInteraction.instance.transform.position;
+              NodeGraph nodeGraph = SceneInfo.instance.GetNodeGraph(MapNodeGroup.GraphType.Ground);
+              foreach (NodeGraph.NodeIndex withFlagCondition in nodeGraph.FindNodesInRangeWithFlagConditions(position1, 0.0f, 50, HullMask.Human, NodeFlags.None, NodeFlags.NoCharacterSpawn, false))
+              {
+                Vector3 position2;
+                if (nodeGraph.GetNodePosition(withFlagCondition, out position2))
+                  SpawnPoint.AddSpawnPoint(position2, Quaternion.LookRotation(position1, Vector3.up));
+              }
+              // Spawn Void Suppressors
+              DirectorPlacementRule placementRule = new DirectorPlacementRule();
+              placementRule.placementMode = DirectorPlacementRule.PlacementMode.Random;
+              DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC1/VoidSuppressor/iscVoidSuppressor.asset").WaitForCompletion(), placementRule, Run.instance.stageRng));
             }
           }
+          if (!(bool)TeleporterInteraction.instance)
+            return;
+          ChildLocator component2 = TeleporterInteraction.instance.GetComponent<ModelLocator>().modelTransform.GetComponent<ChildLocator>();
+          if (!(bool)component2)
+            return;
+          component2.FindChild("TimeCrystalProps").gameObject.SetActive(true);
+          component2.FindChild("TimeCrystalBeaconBlocker").gameObject.SetActive(true);
         }
       }
       orig(self);

@@ -14,18 +14,32 @@ namespace EntropyStages
         public uint crystalCount = 3;
         public uint crystalsRequiredToKill = 3;
         private List<OnDestroyCallback> crystalActiveList = new List<OnDestroyCallback>();
-
+        public static event Action<CrystalController> onBossGroupStartServer;
         public uint crystalsKilled => (uint)(this.crystalCount - (ulong)this.crystalActiveList.Count);
 
-        public void Start()
+        public void OnStart()
+        {
+            if (!NetworkServer.active)
+                return;
+            Action<CrystalController> crystalStartServer = CrystalController.onBossGroupStartServer;
+            if (crystalStartServer == null)
+                return;
+            crystalStartServer(this);
+        }
+        private void OnEnable()
         {
             DirectorPlacementRule placementRule = new DirectorPlacementRule();
             placementRule.placementMode = DirectorPlacementRule.PlacementMode.Random;
             for (int index = 0; index < this.crystalCount; ++index)
                 this.crystalActiveList.Add(OnDestroyCallback.AddCallback(DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(this.crystalSpawnCard, placementRule, Run.instance.stageRng)), component => this.crystalActiveList.Remove(component)));
+            InstanceTracker.Add<CrystalController>(this);
             ObjectivePanelController.collectObjectiveSources += new Action<CharacterMaster, List<ObjectivePanelController.ObjectiveSourceDescriptor>>(this.ReportObjective);
         }
-
+        private void OnDisable()
+        {
+            ObjectivePanelController.collectObjectiveSources -= new Action<CharacterMaster, List<ObjectivePanelController.ObjectiveSourceDescriptor>>(this.ReportObjective);
+            InstanceTracker.Remove<CrystalController>(this);
+        }
         public void ReportObjective(
           CharacterMaster master,
           List<ObjectivePanelController.ObjectiveSourceDescriptor> output)
@@ -66,7 +80,7 @@ namespace EntropyStages
                     origin = child.transform.position
                 }, false);
                 child.gameObject.SetActive(false);
-                ObjectivePanelController.collectObjectiveSources -= new Action<CharacterMaster, List<ObjectivePanelController.ObjectiveSourceDescriptor>>(this.ReportObjective);
+                this.enabled = false;
             }
         }
     }

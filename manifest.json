@@ -1,6 +1,6 @@
 ﻿{
 	"name": "EntropyStages",
-	"version_number": "0.9.5",
+	"version_number": "0.9.6",
 	"website_url": "https://github.com/FocusedFault/EntropyStages/issues",
 	"description": "Stages module for Entropy. Makes simulacrum stages accessible in normal runs with a new interactable and objectives.",
 	"dependencies": [
