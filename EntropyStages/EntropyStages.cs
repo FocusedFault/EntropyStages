@@ -1,4 +1,5 @@
 using BepInEx;
+using BepInEx.Configuration;
 using R2API;
 using RoR2;
 using RoR2.Navigation;
@@ -7,14 +8,12 @@ using System.Collections.Generic;
 using System;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.AddressableAssets;
 using UnityEngine.SceneManagement;
-using Rewired.Utils;
 
 namespace EntropyStages
 {
-  [BepInPlugin("com.Nuxlar.EntropyStages", "EntropyStages", "0.9.6")]
+  [BepInPlugin("com.Nuxlar.EntropyStages", "EntropyStages", "0.9.9")]
   [BepInDependency(EliteAPI.PluginGUID)]
   [BepInDependency(PrefabAPI.PluginGUID)]
 
@@ -59,11 +58,63 @@ namespace EntropyStages
     private static DirectorCardCategorySelection[] dccsInteractables = new DirectorCardCategorySelection[] {
       Addressables.LoadAssetAsync<DirectorCardCategorySelection>("RoR2/DLC1/GameModes/InfiniteTowerRun/InfiniteTowerAssets/dccsInfiniteTowerInteractables.asset").WaitForCompletion()
     };
+    private GameObject voidSeed = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/DLC1/VoidCamp/VoidCamp.prefab").WaitForCompletion(), "RescueMissionNux");
+    private static Material shieldMat = Addressables.LoadAssetAsync<Material>("RoR2/Base/Engi/matDefenseMatrix.mat").WaitForCompletion();
+    private static Material shieldMat2 = Addressables.LoadAssetAsync<Material>("RoR2/Base/Engi/matDefenseMatrixCenter.mat").WaitForCompletion();
+    private GameObject survivorPod = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/SurvivorPod/SurvivorPod.prefab").WaitForCompletion(), "EmergencyPodNux");
+    private InteractableSpawnCard interactableSpawnCard = ScriptableObject.CreateInstance<InteractableSpawnCard>();
     private static String[] voidStageNames = new String[] { "itgolemplains", "itgoolake", "itancientloft", "itfrozenwall", "itdampcave", "itskymeadow" };
-
+    public static ConfigEntry<float> riftChance;
+    public static ConfigEntry<bool> balanceToggle;
+    private static ConfigFile ESConfig { get; set; }
     public void Awake()
     {
+      ESConfig = new ConfigFile(Paths.ConfigPath + "\\com.Nuxlar.EntropyStages.cfg", true);
+      riftChance = ESConfig.Bind<float>("General", "Rift Spawn Chance", 0.25f, "How likely is it for a void rift to appear?");
+      balanceToggle = ESConfig.Bind<bool>("General", "Toggle Stage Balancer", true, "Enable/Disable vanilla stage balancing tweaks.");
+      if (balanceToggle.Value)
+        new StageBalancer();
+      /*
+      Transform monsterInteractables = voidSeed.transform.GetChild(0);
+      Transform propsElites = voidSeed.transform.GetChild(1); // should be fine as is
+      Transform emitterProp = voidSeed.transform.GetChild(2); // replace with drop pod
+      Transform pointLight = voidSeed.transform.GetChild(3); // inactive
+
+      Destroy(monsterInteractables.GetComponent<FogDamageController>());
+      Destroy(monsterInteractables.GetComponent<SphereZone>());
+      monsterInteractables.GetComponent<TeamFilter>().teamIndex = TeamIndex.Monster;
+      //  monsterInteractables.GetComponent<CombatDirector>().teamIndex = TeamIndex.Monster;
+      monsterInteractables.GetComponent<CampDirector>().interactableDirectorCards = new();
+      monsterInteractables.GetComponent<CampDirector>().campMaximumRadius = 30;
+
+      // propsElites.GetComponent<CombatDirector>().teamIndex = TeamIndex.Monster;
+      propsElites.GetComponent<CampDirector>().campMaximumRadius = 30;
+
+      emitterProp.GetChild(3).GetChild(0).localScale /= 2;
+      emitterProp.GetChild(3).GetChild(0).GetComponent<MeshRenderer>().sharedMaterials = new Material[] { shieldMat, shieldMat2 };
+      MeshCollider mc = emitterProp.GetChild(3).GetChild(0).gameObject.AddComponent<MeshCollider>();
+      emitterProp.GetChild(3).GetChild(0).gameObject.AddComponent<ReverseNormals>();
+      emitterProp.GetChild(3).GetChild(0).gameObject.AddComponent<DisableCollisionsIfInTrigger>().colliderToIgnore = emitterProp.GetChild(3).GetChild(0).gameObject.GetComponent<SphereCollider>();
+      emitterProp.GetChild(0).gameObject.SetActive(false);
+      emitterProp.GetChild(1).gameObject.SetActive(false);
+      emitterProp.GetChild(2).gameObject.SetActive(false);
+      Instantiate(survivorPod.transform.GetChild(0).GetChild(0), emitterProp).localPosition = new Vector3(0, 1.5f, 0);
+
+      pointLight.gameObject.SetActive(true);
+
+      voidSeed.GetComponent<GenericDisplayNameProvider>().displayToken = "Emergency Pod";
+      PrefabAPI.RegisterNetworkPrefab(voidSeed);
+
+      interactableSpawnCard.name = "iscEmergencyPodNux";
+      interactableSpawnCard.prefab = voidSeed;
+      interactableSpawnCard.sendOverNetwork = true;
+      interactableSpawnCard.hullSize = HullClassification.Golem;
+      interactableSpawnCard.nodeGraphType = RoR2.Navigation.MapNodeGroup.GraphType.Ground;
+      interactableSpawnCard.requiredFlags = RoR2.Navigation.NodeFlags.None;
+      interactableSpawnCard.forbiddenFlags = RoR2.Navigation.NodeFlags.NoShrineSpawn | RoR2.Navigation.NodeFlags.NoChestSpawn;
+    */
       SetupVoidTear();
+
       AddVoidStagesToPool();
       On.RoR2.Stage.Start += Stage_Start;
       On.RoR2.CombatDirector.Init += CombatDirector_Init;
@@ -76,7 +127,6 @@ namespace EntropyStages
 
     private void SetupVoidTear()
     {
-      tear.AddComponent<NetworkIdentity>();
       tearPortal.GetComponent<GenericInteraction>().contextToken = "Enter ???";
       tearPortal.GetComponent<SceneExitController>().destinationScene = voidPlains;
       tearPortal.GetComponent<SceneExitController>().useRunNextStageScene = false;
@@ -101,6 +151,8 @@ namespace EntropyStages
       iscVoidTear.nodeGraphType = deepVoidSpawnCard.nodeGraphType;
       iscVoidTear.requiredFlags = deepVoidSpawnCard.requiredFlags;
       iscVoidTear.forbiddenFlags = deepVoidSpawnCard.forbiddenFlags;
+
+      PrefabAPI.RegisterNetworkPrefab(tearPortal);
     }
 
     private void VoidSuppressorBehavior_Start(On.RoR2.VoidSuppressorBehavior.orig_Start orig, VoidSuppressorBehavior self)
@@ -133,7 +185,7 @@ namespace EntropyStages
       string name = SceneManager.GetActiveScene().name;
       if (!voidStageNames.Contains(name))
         return orig(self);
-      CrystalController component = GameObject.Find("InfiniteTowerSceneDirector").GetComponent<CrystalController>();
+      CrystalController component = (CrystalController)InstanceTracker.FindInstancesEnumerable(typeof(CrystalController)).First();
       return string.Format(Language.GetString(self.baseToken), component.crystalsKilled, component.crystalsRequiredToKill);
     }
 
@@ -190,7 +242,7 @@ namespace EntropyStages
     private void TeleporterInteraction_AttemptToSpawnAllEligiblePortals(On.RoR2.TeleporterInteraction.orig_AttemptToSpawnAllEligiblePortals orig, TeleporterInteraction self)
     {
       string name = SceneManager.GetActiveScene().name;
-      if (UnityEngine.Random.value < 1f)
+      if (UnityEngine.Random.value < riftChance.Value)
       {
         GameObject voidTearInstance;
         switch (name)
@@ -328,6 +380,9 @@ namespace EntropyStages
               DirectorPlacementRule placementRule = new DirectorPlacementRule();
               placementRule.placementMode = DirectorPlacementRule.PlacementMode.Random;
               DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC1/VoidSuppressor/iscVoidSuppressor.asset").WaitForCompletion(), placementRule, Run.instance.stageRng));
+              DirectorPlacementRule placementRule2 = new DirectorPlacementRule();
+              placementRule2.placementMode = DirectorPlacementRule.PlacementMode.Random;
+              DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(interactableSpawnCard, placementRule2, Run.instance.stageRng));
             }
           }
           if (!(bool)TeleporterInteraction.instance)

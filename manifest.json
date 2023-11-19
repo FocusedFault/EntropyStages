@@ -1,8 +1,8 @@
 ﻿{
 	"name": "EntropyStages",
-	"version_number": "0.9.6",
+	"version_number": "0.9.9",
 	"website_url": "https://github.com/FocusedFault/EntropyStages/issues",
-	"description": "Stages module for Entropy. Makes simulacrum stages accessible in normal runs with a new interactable and objectives.",
+	"description": "Stages module for Entropy. Tweaks stage balance and adds new stage interactions. Configurable",
 	"dependencies": [
 		"RiskofThunder-R2API_Elites-1.0.3",
 		"RiskofThunder-R2API_Prefab-1.0.3"
