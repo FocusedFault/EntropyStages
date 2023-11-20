@@ -28,15 +28,23 @@ Entropy is a larger mod I'm planning that'll be divided into modules instead of 
 
 ### Stage Balancing/Tweaks
 
+#### Stage 1
+
 - Fixes Roost 1 not having a guaranteed newt altar
 - Makes Alloy Worship Unit's special CD start at the end of the ability
 - Increases Plains/Roost interactable credits from 220 > 230
 - Reduces Siphoned interactable credits from 300 > 290
 - Large category chest swap: Forest damage > healing, Plains healing > damage
+
+#### Stage 2
+
 - Increases Wetland interactable credits from 280 > 320
 - Adds Clay Templars to Aqueduct
 - Removes lunar pods from Aphelian to prevent phantom credit loss
 - Large category chest swap: Acqueduct damage > healing, Wetland healing > damage
+
+#### Stage 3
+
 - Reduces gold barrel spawn rate by 40% on pools
 - Increases gold barrel spawn rate by 20% on acres
 - Reduces drone spawn rate by 50% on RPD
@@ -44,6 +52,9 @@ Entropy is a larger mod I'm planning that'll be divided into modules instead of 
 - Large category chest swap: Acres damage > healing, Pools healing > damage
 - Enemy swap: Pools alpha > hermit crab, Acres beetle > lemurian beetle guard > apothecary, RPD vermin > alpha construct
 - Boss swap: Pools xi > worm, RPD dunestrider > xi
+
+#### Stage 4
+
 - Abyssal reduces bonus interactable credits 160 > 80
 - Sirens and Grove interactable credit increase 400 > 430
 - Sirens and Grove small/large chest weight decrease by 10%
@@ -54,8 +65,14 @@ Entropy is a larger mod I'm planning that'll be divided into modules instead of 
 - Large category chest swap: Abyssal damage > healing, Sirens healing > damage
 - Enemy swap: Sirens larva > lemurian, Abyssal crab > larva, Grove larva > alpha construct
 - Boss swap: Grove dunestrider > grovetender vagrant > xi
+
+#### Stage 5
+
 - Enemy swap: Sky Meadow alpha construct > vulture
 - Boss swap: Sky Meadow xi > magma worm
+
+#### Special Stages
+
 - Reduces Gilded Coast beacons to 4
 - Reduces Moon pillars to 2
 - Reduces Void Locus "pillars" to 2

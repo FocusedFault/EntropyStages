@@ -380,9 +380,6 @@ namespace EntropyStages
               DirectorPlacementRule placementRule = new DirectorPlacementRule();
               placementRule.placementMode = DirectorPlacementRule.PlacementMode.Random;
               DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC1/VoidSuppressor/iscVoidSuppressor.asset").WaitForCompletion(), placementRule, Run.instance.stageRng));
-              DirectorPlacementRule placementRule2 = new DirectorPlacementRule();
-              placementRule2.placementMode = DirectorPlacementRule.PlacementMode.Random;
-              DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(interactableSpawnCard, placementRule2, Run.instance.stageRng));
             }
           }
           if (!(bool)TeleporterInteraction.instance)
